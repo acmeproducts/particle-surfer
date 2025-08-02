@@ -104,6 +104,9 @@ export function createColorGrid(params: {
     }
   }
 
+  const temp1 = { r: 0, g: 0, b: 0 };
+  const temp2 = { r: 0, g: 0, b: 0 };
+
   /**
    * Writes interpolated color into `out` (mutated), each channel in [0,1].
    */
@@ -128,19 +131,23 @@ export function createColorGrid(params: {
     const c11 = grid[y1][x1];
 
     // bilinear interpolation
-    const mix = (a: RGB01, b: RGB01, t: number): RGB01 => ({
-      r: lerp(a.r, b.r, t),
-      g: lerp(a.g, b.g, t),
-      b: lerp(a.b, b.b, t),
-    });
+    const mix = (a: RGB01, b: RGB01, t: number, out?: RGB01): RGB01 => {
+      if (out) {
+        out.r = lerp(a.r, b.r, t);
+        out.g = lerp(a.g, b.g, t);
+        out.b = lerp(a.b, b.b, t);
+        return out;
+      }
+      return {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t),
+      };
+    };
 
-    const c0 = mix(c00, c10, wx);
-    const c1 = mix(c01, c11, wx);
-    const c = mix(c0, c1, wy);
-
-    out.r = c.r;
-    out.g = c.g;
-    out.b = c.b;
+    mix(c00, c10, wx, temp1);
+    mix(c01, c11, wx, temp2);
+    mix(temp1, temp2, wy, out);
   }
 
   return { grid, getColor };

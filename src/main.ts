@@ -4,6 +4,8 @@ import * as THREE from "three";
 import Stats from "stats.js";
 import { ParticleSystem } from "./particle-system";
 import { Particle } from "./particle";
+import { getCameraMinMax } from "./helper";
+import { mul } from "three/tsl";
 
 let stats: Stats = new Stats();
 stats.showPanel(0);
@@ -13,8 +15,10 @@ const visibleArea = 4;
 const trailHalfLife = 0.15; // seconds, adjust to taste
 const tau = trailHalfLife / Math.log(2);
 
-const innerRingRadius = 5;
-const outerRingRadius = 7;
+const innerRingRadius = 8;
+const outerRingRadius = 12;
+
+let multiplier = 1;
 
 let renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -59,9 +63,9 @@ let level: number = 0;
 
 function setupScene(): void {
   renderer = new THREE.WebGLRenderer({
-    antialising: true,
+    antialias: true,
     preserveDrawingBuffer: true,
-  } as any);
+  });
 
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.autoClearColor = false;
@@ -71,6 +75,8 @@ function setupScene(): void {
   window.addEventListener("resize", onResize, false);
 
   scene = new THREE.Scene();
+
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
   // add black transparent rect
   overlay = new THREE.Mesh(
@@ -102,6 +108,7 @@ function setupScene(): void {
       if (event.key == "l") {
         nextLevel();
       }
+
       if (event.key == "r") {
         let s1 = Math.floor(Math.random() * 100000);
         let s2 = Math.floor(Math.random() * 100000);
@@ -116,6 +123,10 @@ function setupScene(): void {
     },
     false,
   );
+
+  document.addEventListener("keyup", (event: KeyboardEvent) => {
+    keys[event.key] = false;
+  });
 
   document.addEventListener("mouseup", () => {
     switchActive();
@@ -176,8 +187,8 @@ function setupScene(): void {
     new THREE.MeshBasicMaterial({ color: 0xffffff }),
   );
   playerPart = new Particle();
-  playerPart.pos.set(0, 0);
-  playerPart.time = 1000000;
+  resetPlayer();
+
   scene.add(player);
 }
 function nextLevel(): void {
@@ -207,11 +218,20 @@ function switchActive(): void {
   activeMesh.visible = true;
 }
 function resetPlayer(): void {
-  playerPart.reset(camera);
-  playerPart.pos.set(0, 0);
-  playerPart.time = 1000000;
-  camera.position.x = 0;
-  camera.position.y = 0;
+  const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
+
+  playerPart.reset(
+    minX,
+    maxX,
+    minY,
+    maxY,
+    innerRingRadius * innerRingRadius,
+    outerRingRadius * outerRingRadius,
+  );
+  playerPart.pos.set(0, (innerRingRadius + outerRingRadius) / 2);
+  playerPart.time = 100000000;
+  camera.position.x = playerPart.pos.x;
+  camera.position.y = playerPart.pos.y;
   renderer.clear();
 }
 function animate(): void {
@@ -221,17 +241,42 @@ function animate(): void {
 
   let dt: number = clock.getDelta();
 
-  if (particles[0].mesh?.visible) particles[0].update(dt, camera);
-  if (particles[1].mesh?.visible) particles[1].update(dt, camera);
+  if (particles[0].mesh?.visible) particles[0].update(dt, camera, multiplier);
+  if (particles[1].mesh?.visible) particles[1].update(dt, camera, multiplier);
 
+  const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
+
+  multiplier = keys["m"] ? 0.1 : 1;
+  console.log(multiplier);
   if (!stop) {
-    particles[active].applyNoiseForce(playerPart, dt);
+    particles[active].applyNoiseForce(playerPart, dt * multiplier);
 
     playerPart.update(dt, particles[active].maxSpeed);
     player.position.set(playerPart.pos.x, playerPart.pos.y, 0);
 
+    // get angle of player position
+    const angle = Math.atan2(playerPart.pos.y, playerPart.pos.x) - Math.PI / 2;
+    camera.rotation.z = angle;
+
     camera.position.x = (playerPart.pos.x + camera.position.x * 49) / 50;
     camera.position.y = (playerPart.pos.y + camera.position.y * 49) / 50;
+
+    camera.position.z = 0;
+    camera.position.setLength((innerRingRadius + outerRingRadius) / 2);
+    camera.position.z = 10;
+
+    if (
+      playerPart.isDead(
+        minX,
+        maxX,
+        minY,
+        maxY,
+        innerRingRadius * innerRingRadius,
+        outerRingRadius * outerRingRadius,
+      )
+    ) {
+      resetPlayer();
+    }
   }
 
   const alpha = 1 - Math.exp(-dt / tau);

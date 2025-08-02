@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { UberNoise } from "uber-noise";
 import { Particle } from "./particle";
 import { createColorGrid, type ColorGridResult } from "./colors";
+import { getCameraMinMax } from "./helper";
+
+const DEADZONE = 0.2;
 
 interface ParticlesOptions {
   num?: number;
@@ -87,7 +90,7 @@ export class ParticleSystem {
     this.noise = new UberNoise({
       min: -0.01,
       max: 0.01,
-      scale: 0.4,
+      scale: 0.5,
       warp: 0.02,
       lacunarity: 0.5,
       seed: seed,
@@ -121,8 +124,19 @@ export class ParticleSystem {
 
     // p.acc.x = this.noiseData[x][y][0] * dt * 20;
     // p.acc.y = this.noiseData[x][y][1] * dt * 20;
-    p.acc.x = this.noise.get(p.pos.x, p.pos.y) * dt * 20;
-    p.acc.y = this.noise.get(p.pos.x + 123, p.pos.y - 543) * dt * 20;
+
+    const clockwise = p.pos.clone();
+    clockwise.normalize();
+
+    const x = clockwise.x;
+    clockwise.x = clockwise.y;
+    clockwise.y = -x;
+
+    clockwise.setLength(0.003);
+
+    p.acc.x = (this.noise.get(p.pos.x, p.pos.y) + clockwise.x) * dt * 20;
+    p.acc.y =
+      (this.noise.get(p.pos.x + 123, p.pos.y - 543) + clockwise.y) * dt * 20;
   }
 
   createParticles() {
@@ -162,18 +176,39 @@ export class ParticleSystem {
     this.mesh = new THREE.Points(this.geo, mat);
     this.mesh.frustumCulled = false;
   }
-  update(dt: number, camera: THREE.OrthographicCamera) {
+  update(dt: number, camera: THREE.OrthographicCamera, multiplier: number) {
     let color = new THREE.Color(0, 0, 0);
+
+    const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
+
+    const innerRingRadiusSquared = this.innerRingRadius * this.innerRingRadius;
+    const outerRingRadiusSquared = this.outerRingRadius * this.outerRingRadius;
 
     for (let i = 0; i < this.num; i++) {
       let p = this.parts[i];
 
-      if (p.isDead(camera)) {
-        p.reset(camera);
+      if (
+        p.isDead(
+          minX,
+          maxX,
+          minY,
+          maxY,
+          innerRingRadiusSquared,
+          outerRingRadiusSquared,
+        )
+      ) {
+        p.reset(
+          minX,
+          maxX,
+          minY,
+          maxY,
+          innerRingRadiusSquared,
+          outerRingRadiusSquared,
+        );
       }
 
       this.applyNoiseForce(p, dt);
-      p.update(dt, this.maxSpeed);
+      p.update(dt * multiplier, this.maxSpeed);
 
       if (!this.positionData) return;
       this.positionData[i * 3] = p.pos.x;
