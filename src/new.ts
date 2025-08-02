@@ -1,8 +1,7 @@
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.module.js';
+import * as THREE from 'three';
 
-//import { LPSphere, LPPlane } from 'https://1florki.github.io/low_poly_generator/lpshapes.js'
-
-import { Noise } from 'https://1florki.github.io/jsutils2/noise.js'
+import { UberNoise } from "uber-noise";
+// @ts-ignore
 import Stats from "stats.js";
 
 let stats = new Stats();
@@ -60,11 +59,11 @@ class Particles {
     this.createParticles();
   }
   newNoise(seed) {
-    this.noise = new Noise({min: -0.01, max: 0.01, scale: 0.2, octaves: 2, persistence: 0.5, seed: seed})
+    this.noise = new UberNoise({min: -0.01, max: 0.01, scale: 0.2, octaves: 2, persistence: 0.5, seed: seed})
   }
   applyNoiseForce(p) {
-    p.acc.x = this.noise.getValue(p.pos.x, p.pos.y + 23, p.pos.z) + 0.002;
-    p.acc.y = this.noise.getValue(p.pos.x + 100, p.pos.y, p.pos.z);
+    p.acc.x = this.noise.get(p.pos.x, p.pos.y + 23, p.pos.z) + 0.002;
+    p.acc.y = this.noise.get(p.pos.x + 100, p.pos.y, p.pos.z);
   }
   
   createParticles() {
@@ -87,7 +86,7 @@ class Particles {
     var mat = new THREE.PointsMaterial({vertexColors: true, size: this.particleSize, sizeAttenuation: false, color: this.color});
     this.mesh = new THREE.Points(this.geo, mat);
   }
-  update(dt, num) {
+  update(dt: number, num: number) {
     for(let i = 0; i < this.num; i++) {
       let p = this.parts[i];
       
@@ -107,8 +106,7 @@ class Particles {
     this.geo.attributes.position.needsUpdate = true;
     
     if(this.vertexColors) this.geo.attributes.color.needsUpdate = true;
-    
-    this.noise.shiftBy(0.0, 0.0, 0.00);
+  
   }
 
 }
@@ -284,4 +282,4 @@ function onResize() {
 }
 
 setupScene();
-animate();
+animate(0);
