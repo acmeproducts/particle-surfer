@@ -109,7 +109,7 @@ export class ParticleSystem {
       }
     }
   }
-  applyNoiseForce(p: Particle, dt: number) {
+  applyNoiseForce(p: Particle, dt: number, invert: boolean) {
     if (!this.noise) return;
 
     // let x = Math.floor(
@@ -134,9 +134,16 @@ export class ParticleSystem {
 
     clockwise.setLength(0.003);
 
-    p.acc.x = (this.noise.get(p.pos.x, p.pos.y) + clockwise.x) * dt * 20;
-    p.acc.y =
-      (this.noise.get(p.pos.x + 123, p.pos.y - 543) + clockwise.y) * dt * 20;
+    let ax = this.noise.get(p.pos.x, p.pos.y);
+    let ay = this.noise.get(p.pos.x + 123, p.pos.y - 543);
+
+    if (invert) {
+      ax = -ax;
+      ay = -ay;
+    }
+
+    p.acc.x = (ax + clockwise.x) * dt * 20;
+    p.acc.y = (ay + clockwise.y) * dt * 20;
   }
 
   createParticles() {
@@ -176,7 +183,12 @@ export class ParticleSystem {
     this.mesh = new THREE.Points(this.geo, mat);
     this.mesh.frustumCulled = false;
   }
-  update(dt: number, camera: THREE.OrthographicCamera, multiplier: number) {
+  update(
+    dt: number,
+    camera: THREE.OrthographicCamera,
+    multiplier: number,
+    invert: boolean,
+  ) {
     let color = new THREE.Color(0, 0, 0);
 
     const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
@@ -207,7 +219,7 @@ export class ParticleSystem {
         );
       }
 
-      this.applyNoiseForce(p, dt);
+      this.applyNoiseForce(p, dt * multiplier, invert);
       p.update(dt * multiplier, this.maxSpeed);
 
       if (!this.positionData) return;

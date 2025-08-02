@@ -1,10 +1,99 @@
 <html>
-<head>
-  <meta charset="UTF-8">
-</head>
+  <head>
+    <meta charset="UTF-8" />
 
-<body scroll="no" style="overflow: hidden; background-color: rgb(0,0,0); touch-action: none;">
-  <div id="pixi-container"></div>
-  <script src="src/main.js" type="module"></script>
-</body>
+    <link rel="stylesheet" href="src/app.css" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      .circle {
+        transform: rotate(-90deg);
+        stroke-linecap: round;
+      }
+    .test {
+      mix-blend-mode: darken;
+    }
+    </style>
+  </head>
+
+  <body
+    scroll="no"
+    style="overflow: hidden; background-color: rgb(0, 0, 0); touch-action: none"
+  >
+    <div id="pixi-container"></div>
+    <script src="src/main.js" type="module"></script>
+
+    <div class="absolute top-2 right-2 w-16 h-16 z-50">
+      <!-- svg circle -->
+      <svg class="circle" viewBox="0 0 100 100" class="h-full w-full">
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          stroke="#22d3ee"
+          stroke-width="10"
+          fill="none"
+        />
+      </svg>
+    </div>
+
+    <!-- <div
+      class="absolute inset-0 w-full h-full bg-black leading-50 text-white flex items-center text-center justify-center text-[15vw] font-bold test"
+      style="
+        font-family:
+          'Arial Rounded MT Bold', 'Comic Sans MS',
+          sans-serif;
+      "
+    >
+      particle<br /> surfer
+    </div> -->
+
+
+    <div
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-center text-6xl md:text-9xl font-bold"
+      style="
+        font-family:
+          'Arial Rounded MT Bold', 'Comic Sans MS',
+          sans-serif;
+      "
+      id="main-menu"
+    >
+      particle<br /> surfer
+      <button class="text-4xl md:mt-16 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="start-button">
+        start
+      </button>
+    </div>
+
+
+    <div
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-center text-6xl md:text-9xl font-bold hidden"
+      style="
+        font-family:
+          'Arial Rounded MT Bold', 'Comic Sans MS',
+          sans-serif;
+      "
+      id="pause-menu"
+    >
+      level <br /> complete
+      <button class="text-4xl md:mt-16 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="start-button">
+        next level
+      </button>
+    </div>
+
+
+
+    <div class="absolute top-2 right-2 w-16 h-16 z-40">
+      <!-- svg circle -->
+      <svg viewBox="0 0 100 100" class="h-full w-full text-cyan-900/50">
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          stroke="currentColor"
+          stroke-width="10"
+          fill="none"
+        />
+      </svg>
+    </div>
+  </body>
 </html>

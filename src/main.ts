@@ -5,20 +5,30 @@ import Stats from "stats.js";
 import { ParticleSystem } from "./particle-system";
 import { Particle } from "./particle";
 import { getCameraMinMax } from "./helper";
-import { mul } from "three/tsl";
+
+// @ts-ignore
+import { Howl } from "howler";
 
 let stats: Stats = new Stats();
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
 
-const visibleArea = 4;
+let state = "menu";
+
+let visibleArea = 10;
 const trailHalfLife = 0.15; // seconds, adjust to taste
 const tau = trailHalfLife / Math.log(2);
 
-const innerRingRadius = 8;
-const outerRingRadius = 12;
+const innerRingRadius = 4;
+const outerRingRadius = 8;
+
+const smallMultiplier = 0.05;
 
 let multiplier = 1;
+
+let invert = false;
+
+let reached50 = false;
 
 let renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -35,7 +45,10 @@ let renderer: THREE.WebGLRenderer,
   debugOn: boolean = false,
   overlay: THREE.Mesh,
   overlayScene: THREE.Scene,
-  overlayCamera: THREE.OrthographicCamera;
+  overlayCamera: THREE.OrthographicCamera,
+  progressCircumference: number = 0,
+  backgroundMusic: Howl,
+  backgroundMusicRate: number = 1;
 
 const levels: [number, number][] = [
   [89842, 74789],
@@ -100,7 +113,7 @@ function setupScene(): void {
     (event: KeyboardEvent) => {
       keys[event.key] = true;
       if (event.key == " ") {
-        switchActive();
+        multiplier = smallMultiplier;
       }
       if (event.key == "t") {
         stop = !stop;
@@ -126,10 +139,40 @@ function setupScene(): void {
 
   document.addEventListener("keyup", (event: KeyboardEvent) => {
     keys[event.key] = false;
+
+    if (event.key == " ") {
+      multiplier = 1;
+    }
+
+    if (event.key == "n") {
+      invert = !invert;
+    }
   });
 
-  document.addEventListener("mouseup", () => {
-    switchActive();
+  // document.addEventListener("mouseup", () => {
+  //   switchActive();
+  // });
+
+  const startButton = document.getElementById("start-button");
+  if (startButton) {
+    startButton.addEventListener("click", () => {
+      const mainMenu = document.getElementById("main-menu");
+      if (mainMenu) {
+        mainMenu.style.display = "none";
+      }
+      state = "game";
+
+      visibleArea = 4;
+      onResize();
+
+      player.visible = true;
+    });
+  }
+
+  backgroundMusic = new Howl({
+    src: ["/particle-surfer/music.mp3"],
+    autoplay: true,
+    loop: true,
   });
 
   size = new THREE.Vector2(3, 2);
@@ -142,6 +185,14 @@ function setupScene(): void {
   );
   camera.position.z = 10;
   onResize();
+
+  const svgCircle = document.querySelector(".circle circle");
+  if (!svgCircle) throw new Error("circle not found");
+
+  // ensure stroke-dasharray is set to the true circumference
+  const r = parseFloat(svgCircle.getAttribute("r") || "0");
+  progressCircumference = 2 * Math.PI * r;
+  svgCircle.setAttribute("stroke-dasharray", progressCircumference.toFixed(3));
 
   clock = new THREE.Clock();
 
@@ -186,6 +237,7 @@ function setupScene(): void {
     new THREE.SphereGeometry(0.07, 8, 8),
     new THREE.MeshBasicMaterial({ color: 0xffffff }),
   );
+  player.visible = false;
   playerPart = new Particle();
   resetPlayer();
 
@@ -233,6 +285,9 @@ function resetPlayer(): void {
   camera.position.x = playerPart.pos.x;
   camera.position.y = playerPart.pos.y;
   renderer.clear();
+
+  reached50 = false;
+  multiplier = 1;
 }
 function animate(): void {
   requestAnimationFrame(animate);
@@ -241,22 +296,75 @@ function animate(): void {
 
   let dt: number = clock.getDelta();
 
-  if (particles[0].mesh?.visible) particles[0].update(dt, camera, multiplier);
-  if (particles[1].mesh?.visible) particles[1].update(dt, camera, multiplier);
+  const minRate = 0.5;
+  const maxRate = 1;
+  // if (multiplier < 0.5 && backgroundMusicRate > minRate) {
+  //   backgroundMusicRate -= dt * 10;
+  // } else if (multiplier > 0.5 && backgroundMusicRate < maxRate) {
+  //   backgroundMusicRate += dt * 10;
+  // }
+  if (multiplier < 0.5) {
+    backgroundMusicRate = minRate;
+  } else {
+    backgroundMusicRate = maxRate;
+  }
+  backgroundMusic.rate(backgroundMusicRate);
+
+  if (state === "menu") {
+    camera.position.x = 0;
+    camera.position.y = 0;
+    camera.position.z = 10;
+    camera.rotation.z = 0;
+  }
+
+  if (particles[0].mesh?.visible)
+    particles[0].update(dt, camera, multiplier, invert);
+  if (particles[1].mesh?.visible)
+    particles[1].update(dt, camera, multiplier, invert);
 
   const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
 
-  multiplier = keys["m"] ? 0.1 : 1;
-  console.log(multiplier);
-  if (!stop) {
-    particles[active].applyNoiseForce(playerPart, dt * multiplier);
+  // multiplier = keys["m"] ? 0.05 : 1;
+  if (!stop && state === "game") {
+    particles[active].applyNoiseForce(playerPart, dt * multiplier, invert);
 
     playerPart.update(dt, particles[active].maxSpeed);
     player.position.set(playerPart.pos.x, playerPart.pos.y, 0);
 
     // get angle of player position
-    const angle = Math.atan2(playerPart.pos.y, playerPart.pos.x) - Math.PI / 2;
-    camera.rotation.z = angle;
+    const angle = Math.atan2(playerPart.pos.y, playerPart.pos.x);
+    camera.rotation.z = angle - Math.PI / 2;
+
+    let progress = ((Math.PI / 2 - angle) / (2 * Math.PI) + 1) % 1;
+
+    if (progress > 0.6 && !reached50) {
+      progress = 0.01;
+    }
+    if (progress > 0.5 && !reached50) {
+      reached50 = true;
+    }
+
+    if (progress < 0.1 && reached50) {
+      // win;
+      console.log("win");
+      const pauseMenu = document.getElementById("pause-menu");
+      // remove hidden class
+      if (pauseMenu) {
+        pauseMenu.classList.remove("hidden");
+      }
+      state = "pause";
+      player.visible = false;
+      multiplier = 1;
+      progress = 1;
+    }
+
+    const offset = (1 - progress) * progressCircumference;
+
+    const svgCircle = document.querySelector(".circle");
+    if (svgCircle && svgCircle instanceof SVGElement) {
+      console.log(offset);
+      svgCircle.setAttribute("stroke-dashoffset", offset.toFixed(3));
+    }
 
     camera.position.x = (playerPart.pos.x + camera.position.x * 49) / 50;
     camera.position.y = (playerPart.pos.y + camera.position.y * 49) / 50;
