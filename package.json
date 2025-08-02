@@ -13,7 +13,9 @@
     "vite": "^7.0.4"
   },
   "dependencies": {
+    "@types/three": "^0.178.1",
     "pixi.js": "^8.11.0",
+    "prettier": "^3.6.2",
     "stats.js": "^0.17.0",
     "three": "^0.179.1",
     "uber-noise": "^0.2.2"
