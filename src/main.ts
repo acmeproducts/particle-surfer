@@ -11,9 +11,9 @@ import { Howl } from "howler";
 
 let stats: Stats = new Stats();
 stats.showPanel(0);
-document.body.appendChild(stats.dom);
+// document.body.appendChild(stats.dom);
 
-let state = "menu";
+let state: "menu" | "game" | "pause" = "menu";
 
 let visibleArea = 10;
 const trailHalfLife = 0.15; // seconds, adjust to taste
@@ -47,7 +47,7 @@ let renderer: THREE.WebGLRenderer,
   backgroundMusicRate: number = 1,
   goal: THREE.Mesh;
 
-const levels: number[] = [89842];
+const levels: number[] = [89842, 7459, 22391, 78284, 70828, 87609, 49585];
 
 let level: number = 0;
 
@@ -98,25 +98,34 @@ function setupScene(): void {
     "keydown",
     (event: KeyboardEvent) => {
       keys[event.key] = true;
-      if (event.key == " ") {
+      if (event.key == " " && state === "game") {
         multiplier = smallMultiplier;
       }
-      if (event.key == "t") {
-        stop = !stop;
-      }
-      if (event.key == "l") {
-        nextLevel();
-      }
+      // if (event.key == "t") {
+      //   stop = !stop;
+      // }
+      // if (event.key == "l") {
+      //   nextLevel();
+      // }
 
-      if (event.key == "r") {
-        let s1 = Math.floor(Math.random() * 100000);
-        particles[0].newNoise(s1);
-        console.log("random level [" + s1 + "]");
-        resetPlayer();
-      }
+      // if (event.key == "r") {
+      //   let s1 = Math.floor(Math.random() * 100000);
+      //   particles[0].newNoise(s1);
+      //   console.log("random level [" + s1 + "]");
+      //   resetPlayer();
+      // }
     },
     false,
   );
+
+  // pause menu
+
+  const nextLevelButton = document.getElementById("next-level-button");
+  if (nextLevelButton) {
+    nextLevelButton.addEventListener("click", () => {
+      nextLevel();
+    });
+  }
 
   document.addEventListener("keyup", (event: KeyboardEvent) => {
     keys[event.key] = false;
@@ -125,8 +134,17 @@ function setupScene(): void {
       multiplier = 1;
     }
 
-    if (event.key == "n") {
-      invert = !invert;
+    // if (event.key == "n") {
+    //   invert = !invert;
+    // }
+
+    if (event.key == "f") {
+      const fullscreen = document.fullscreenElement;
+      if (fullscreen) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen();
+      }
     }
   });
 
@@ -147,6 +165,10 @@ function setupScene(): void {
       onResize();
 
       player.visible = true;
+      const progressBar = document.getElementById("progress-bar");
+      if (progressBar) {
+        progressBar.classList.remove("hidden");
+      }
     });
   }
 
@@ -224,8 +246,23 @@ function setupScene(): void {
   scene.add(player);
 }
 function nextLevel(): void {
+  const pauseMenu = document.getElementById("pause-menu");
+  if (pauseMenu) {
+    pauseMenu.classList.add("hidden");
+  }
+  state = "game";
+
+  resetPlayer();
+
   level++;
-  if (level >= levels.length) level = 0;
+  if (level >= levels.length) {
+    // random level
+    level = Math.floor(Math.random() * 100000);
+    particles[0].newNoise(level);
+
+    console.log("random level: " + level + " [" + level + "]");
+    return;
+  }
 
   particles[0].newNoise(levels[level]);
   // particles[1].newNoise(levels[level][1]);
@@ -263,6 +300,8 @@ function resetPlayer(): void {
   camera.position.x = playerPart.pos.x;
   camera.position.y = playerPart.pos.y;
   renderer.clear();
+
+  player.visible = true;
 
   reached50 = false;
   multiplier = 1;

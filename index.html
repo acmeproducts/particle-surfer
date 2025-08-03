@@ -23,7 +23,7 @@
     <div id="pixi-container"></div>
     <script src="src/main.js" type="module"></script>
 
-    <div class="absolute top-2 right-2 w-16 h-16 z-50">
+    <div class="absolute top-2 right-2 w-16 h-16 z-50 hidden" id="progress-bar">
       <!-- svg circle -->
       <svg class="circle" viewBox="0 0 100 100" class="h-full w-full">
         <circle
@@ -50,7 +50,7 @@
 
 
     <div
-      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-center text-6xl md:text-9xl font-bold"
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-between text-6xl md:text-9xl font-bold"
       style="
         font-family:
           'Arial Rounded MT Bold', 'Comic Sans MS',
@@ -58,10 +58,18 @@
       "
       id="main-menu"
     >
+    <div></div>
+    <div class="flex flex-col items-center justify-center mt-12">
       particle<br /> surfer
-      <button class="text-4xl md:mt-16 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="start-button">
+      <button class="text-4xl md:mt-12 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="start-button">
         start
       </button>
+    </div>
+    <div class="flex flex-col items-center justify-center text-lg mb-8 px-4 text-cyan-200" style="
+    font-family:
+      'Arial Rounded MT', 'Comic Sans MS',
+      sans-serif;
+  ">let the waves carry you for one full loop, press space to slow down time</div>
     </div>
 
 
@@ -75,12 +83,12 @@
       id="pause-menu"
     >
       level <br /> complete
-      <button class="text-4xl md:mt-16 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="start-button">
+      <button class="text-4xl md:mt-16 mt-8 cursor-pointer text-cyan-500 hover:text-cyan-400" id="next-level-button">
         next level
       </button>
     </div>
 
-    <div id="overlay" class="fixed inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 bg-radial-[at_50%_55%] from-transparent via-transparent to-cyan-500/20"></div>
+    <div id="overlay" class="fixed inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 bg-radial-[at_50%_55%] from-transparent via-transparent to-cyan-800/20"></div>
 
 
     <div class="absolute top-2 right-2 w-16 h-16 z-40">
