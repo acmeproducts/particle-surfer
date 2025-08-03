@@ -44,7 +44,8 @@ let renderer: THREE.WebGLRenderer,
   overlay: THREE.Mesh,
   progressCircumference: number = 0,
   backgroundMusic: Howl,
-  backgroundMusicRate: number = 1;
+  backgroundMusicRate: number = 1,
+  goal: THREE.Mesh;
 
 const levels: number[] = [89842];
 
@@ -109,10 +110,8 @@ function setupScene(): void {
 
       if (event.key == "r") {
         let s1 = Math.floor(Math.random() * 100000);
-        let s2 = Math.floor(Math.random() * 100000);
         particles[0].newNoise(s1);
-        particles[1].newNoise(s2);
-        console.log("random level [" + s1 + ", " + s2 + "]");
+        console.log("random level [" + s1 + "]");
         resetPlayer();
       }
     },
@@ -214,12 +213,12 @@ function setupScene(): void {
   playerPart = new Particle();
   resetPlayer();
 
-  const goal = new THREE.Mesh(
+  goal = new THREE.Mesh(
     new THREE.BoxGeometry(0.2, outerRingRadius - innerRingRadius + 1, 0.07),
     new THREE.MeshBasicMaterial({ color: 0 }),
   );
   goal.position.set(0, outerRingRadius - innerRingRadius / 2 - 0.5, 0);
-  // goal.visible = false;
+  goal.visible = false;
   scene.add(goal);
 
   scene.add(player);
@@ -267,6 +266,7 @@ function resetPlayer(): void {
 
   reached50 = false;
   multiplier = 1;
+  if (goal) goal.visible = false;
 }
 function animate(): void {
   requestAnimationFrame(animate);
@@ -333,11 +333,11 @@ function animate(): void {
     }
     if (progress > 0.5 && !reached50) {
       reached50 = true;
+      goal.visible = true;
     }
 
     if (progress < 0.1 && reached50) {
       // win;
-      console.log("win");
       const pauseMenu = document.getElementById("pause-menu");
       // remove hidden class
       if (pauseMenu) {
@@ -353,7 +353,6 @@ function animate(): void {
 
     const svgCircle = document.querySelector(".circle");
     if (svgCircle && svgCircle instanceof SVGElement) {
-      console.log(offset);
       svgCircle.setAttribute("stroke-dashoffset", offset.toFixed(3));
     }
 
