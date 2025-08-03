@@ -9,6 +9,9 @@ import { getCameraMinMax } from "./helper";
 // @ts-ignore
 import { Howl } from "howler";
 
+const base = "./particle-surfer";
+// const base = ".";
+
 let stats: Stats = new Stats();
 stats.showPanel(0);
 // document.body.appendChild(stats.dom);
@@ -47,7 +50,49 @@ let renderer: THREE.WebGLRenderer,
   backgroundMusicRate: number = 1,
   goal: THREE.Mesh;
 
-const levels: number[] = [89842, 7459, 22391, 78284, 70828, 87609, 49585];
+//     gradientXStops: ["#00ff00", "#000000", "#000000", "#ffff00"],
+//     gradientYStops: ["#00ff00", "#000000", "#000000", "#00ffff"],
+
+const gradientStops = {
+  blue_green: {
+    gradientXStops: ["#0d9488", "#000000", "#000000", "#0891b2"],
+    gradientYStops: ["#1d4ed8", "#000000", "#000000", "#15803d"],
+  },
+  yellow_red: {
+    gradientXStops: ["#ff0000", "#000000", "#000000", "#ffaa00"],
+    gradientYStops: ["#ff5500", "#000000", "#000000", "#ffaa00"],
+  },
+  green: {
+    gradientXStops: ["#00ff00", "#000000", "#000000", "#88ff00"],
+    gradientYStops: ["#44ff00", "#000000", "#000000", "#00ff88"],
+  },
+  pink: {
+    gradientXStops: ["#ff0000", "#000000", "#000000", "#ff00ff"],
+    gradientYStops: ["#ff4400", "#000000", "#000000", "#880044"],
+  },
+  black_white: {
+    gradientXStops: ["#818181", "#000000", "#000000", "#a1a1a1"],
+    gradientYStops: ["#c2c2c2", "#000000", "#000000", "#959595"],
+  },
+  red: {
+    gradientXStops: ["#ff0000", "#000000", "#000000", "#ff4400"],
+    gradientYStops: ["#ff0044", "#000000", "#000000", "#ff0000"],
+  },
+};
+
+const levels: {
+  seed: number;
+  name: string;
+  colors?: { gradientXStops: string[]; gradientYStops: string[] };
+}[] = [
+  { seed: 89842, name: "Level 1" },
+  { seed: 7459, name: "Level 2", colors: gradientStops.yellow_red },
+  { seed: 22391, name: "Level 3", colors: gradientStops.green },
+  { seed: 78284, name: "Level 4", colors: gradientStops.pink },
+  { seed: 70828, name: "Level 5", colors: gradientStops.black_white },
+  { seed: 87609, name: "Level 6", colors: gradientStops.red },
+  { seed: 49585, name: "Level 7", colors: gradientStops.blue_green },
+];
 
 let level: number = 0;
 
@@ -104,19 +149,63 @@ function setupScene(): void {
       // if (event.key == "t") {
       //   stop = !stop;
       // }
-      // if (event.key == "l") {
-      //   nextLevel();
-      // }
+      if (event.key == "l") {
+        nextLevel();
+      }
 
-      // if (event.key == "r") {
-      //   let s1 = Math.floor(Math.random() * 100000);
-      //   particles[0].newNoise(s1);
-      //   console.log("random level [" + s1 + "]");
-      //   resetPlayer();
-      // }
+      if (event.key == "r") {
+        level = 10000;
+        nextLevel();
+      }
     },
     false,
   );
+
+  document.addEventListener("mousedown", (event: MouseEvent) => {
+    if (state === "game") {
+      event.preventDefault();
+
+      multiplier = smallMultiplier;
+    }
+  });
+
+  document.addEventListener("mouseup", () => {
+    multiplier = 1;
+  });
+
+  // add touch events
+  document.addEventListener("touchstart", (event: TouchEvent) => {
+    if (state === "game") {
+      event.preventDefault();
+
+      multiplier = smallMultiplier;
+    }
+  });
+
+  document.addEventListener("contextmenu", (event: MouseEvent) => {
+    if (state === "game") {
+      event.preventDefault();
+    }
+  });
+
+  document.addEventListener("touchend", () => {
+    multiplier = 1;
+  });
+
+  const restartButton = document.getElementById("restart-button");
+  if (restartButton) {
+    restartButton.addEventListener("click", () => {
+      resetPlayer();
+
+      const deathMenu = document.getElementById("death-menu");
+      if (deathMenu) {
+        deathMenu.classList.add("hidden");
+      }
+      state = "game";
+      player.visible = true;
+      multiplier = 1;
+    });
+  }
 
   // pause menu
 
@@ -157,9 +246,9 @@ function setupScene(): void {
     startButton.addEventListener("click", () => {
       const mainMenu = document.getElementById("main-menu");
       if (mainMenu) {
+        startButton.classList.add("hidden");
         mainMenu.style.display = "none";
       }
-      state = "game";
 
       visibleArea = 3;
       onResize();
@@ -169,11 +258,13 @@ function setupScene(): void {
       if (progressBar) {
         progressBar.classList.remove("hidden");
       }
+      resetPlayer();
+      state = "game";
     });
   }
 
   backgroundMusic = new Howl({
-    src: ["/particle-surfer/music.mp3"],
+    src: [`${base}/music.mp3`],
     autoplay: true,
     loop: true,
   });
@@ -195,7 +286,7 @@ function setupScene(): void {
     innerRingRadius: innerRingRadius,
     outerRingRadius: outerRingRadius,
 
-    seed: levels[level],
+    seed: levels[level].seed,
 
     colorGridOptions: {
       gradientXStops: ["#0d9488", "#000000", "#000000", "#0891b2"],
@@ -260,13 +351,22 @@ function nextLevel(): void {
     level = Math.floor(Math.random() * 100000);
     particles[0].newNoise(level);
 
+    const colors = Object.values(gradientStops);
+    // random colors
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    particles[0].setColors(randomColor);
+
     console.log("random level: " + level + " [" + level + "]");
     return;
   }
 
-  particles[0].newNoise(levels[level]);
+  particles[0].newNoise(levels[level].seed);
+  let colors = levels[level].colors;
+  if (colors) {
+    particles[0].setColors(colors);
+  }
   // particles[1].newNoise(levels[level][1]);
-  console.log("level: " + level + " [" + levels[level] + "]");
+  console.log("level: " + level + " [" + levels[level].seed + "]");
 }
 function switchActive(): void {
   active++;
@@ -412,7 +512,14 @@ function animate(): void {
         outerRingRadius * outerRingRadius,
       )
     ) {
-      resetPlayer();
+      console.log("player died");
+      const deathMenu = document.getElementById("death-menu");
+      if (deathMenu) {
+        deathMenu.classList.remove("hidden");
+      }
+      state = "pause";
+      player.visible = false;
+      multiplier = 1;
     }
   }
 

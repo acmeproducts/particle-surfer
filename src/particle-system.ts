@@ -146,6 +146,13 @@ export class ParticleSystem {
     p.acc.y = (ay + clockwise.y) * dt * 20;
   }
 
+  setColors(colors: { gradientXStops: string[]; gradientYStops: string[] }) {
+    this.colorGrid = createColorGrid({
+      gradientXStops: colors.gradientXStops,
+      gradientYStops: colors.gradientYStops,
+    });
+  }
+
   createParticles() {
     this.geo = new THREE.BufferGeometry();
 
