@@ -17,10 +17,11 @@
     "@types/three": "^0.178.1",
     "howler": "^2.2.4",
     "pixi.js": "^8.11.0",
+    "postprocessing": "^6.37.6",
     "prettier": "^3.6.2",
     "stats.js": "^0.17.0",
     "tailwindcss": "^4.1.11",
-    "three": "^0.179.1",
+    "three": "^0.178.0",
     "uber-noise": "^0.2.2"
   }
 }

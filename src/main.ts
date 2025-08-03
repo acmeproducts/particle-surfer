@@ -20,7 +20,7 @@ const trailHalfLife = 0.15; // seconds, adjust to taste
 const tau = trailHalfLife / Math.log(2);
 
 const innerRingRadius = 4;
-const outerRingRadius = 8;
+const outerRingRadius = 9;
 
 const smallMultiplier = 0.05;
 
@@ -41,53 +41,41 @@ let renderer: THREE.WebGLRenderer,
   active: number = 0,
   size: THREE.Vector2,
   stop: boolean = false,
-  helpCamera: THREE.PerspectiveCamera,
-  debugOn: boolean = false,
   overlay: THREE.Mesh,
-  overlayScene: THREE.Scene,
-  overlayCamera: THREE.OrthographicCamera,
   progressCircumference: number = 0,
   backgroundMusic: Howl,
   backgroundMusicRate: number = 1;
 
-const levels: [number, number][] = [
-  [89842, 74789],
-  [41742, 37680],
-  [78288, 60840],
-  [15693, 83395],
-  [54971, 5891],
-  [29338, 42504],
-  [83166, 59559],
-  [14271, 26324],
-  [87125, 3695],
-  [43298, 94833],
-  [12641, 84336],
-  [81706, 92840],
-  [81342, 18215],
-  [68226, 9387],
-  [50415, 61135],
-  [40356, 68917],
-  [21870, 34087],
-  [77604, 4641],
-  [35813, 32668],
-];
+const levels: number[] = [89842];
 
 let level: number = 0;
 
 function setupScene(): void {
   renderer = new THREE.WebGLRenderer({
-    antialias: true,
+    powerPreference: "high-performance",
+    antialias: false,
+    stencil: false,
+    depth: false,
     preserveDrawingBuffer: true,
   });
 
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.autoClearColor = false;
 
+  scene = new THREE.Scene();
+
+  camera = new THREE.OrthographicCamera(
+    -visibleArea,
+    visibleArea,
+    visibleArea,
+    -visibleArea,
+  );
+  camera.position.z = 10;
+  onResize();
+
   document.body.appendChild(renderer.domElement);
 
   window.addEventListener("resize", onResize, false);
-
-  scene = new THREE.Scene();
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
@@ -103,10 +91,7 @@ function setupScene(): void {
   );
   overlay.position.set(0, 0, -10);
 
-  overlayScene = new THREE.Scene();
-  overlayCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
-  overlayScene.add(overlay);
-  overlayCamera.position.z = 10;
+  scene.add(overlay);
 
   document.addEventListener(
     "keydown",
@@ -129,9 +114,6 @@ function setupScene(): void {
         particles[1].newNoise(s2);
         console.log("random level [" + s1 + ", " + s2 + "]");
         resetPlayer();
-      }
-      if (event.key == "d") {
-        debugOn = !debugOn;
       }
     },
     false,
@@ -162,7 +144,7 @@ function setupScene(): void {
       }
       state = "game";
 
-      visibleArea = 4;
+      visibleArea = 3;
       onResize();
 
       player.visible = true;
@@ -176,15 +158,6 @@ function setupScene(): void {
   });
 
   size = new THREE.Vector2(3, 2);
-
-  camera = new THREE.OrthographicCamera(
-    -visibleArea,
-    visibleArea,
-    visibleArea,
-    -visibleArea,
-  );
-  camera.position.z = 10;
-  onResize();
 
   const svgCircle = document.querySelector(".circle circle");
   if (!svgCircle) throw new Error("circle not found");
@@ -201,35 +174,35 @@ function setupScene(): void {
     innerRingRadius: innerRingRadius,
     outerRingRadius: outerRingRadius,
 
-    seed: levels[level][0],
+    seed: levels[level],
 
     colorGridOptions: {
-      gradientXStops: ["#ff0000", "#000000", "#000000", "#0000ff"],
-      gradientYStops: ["#ff0000", "#000000", "#000000", "#0000ff"],
+      gradientXStops: ["#0d9488", "#000000", "#000000", "#0891b2"],
+      gradientYStops: ["#1d4ed8", "#000000", "#000000", "#15803d"],
       detailX: 30,
       detailY: 30,
     },
   });
-  let part2: ParticleSystem = new ParticleSystem({
-    size: size,
-    innerRingRadius: innerRingRadius,
-    outerRingRadius: outerRingRadius,
+  // let part2: ParticleSystem = new ParticleSystem({
+  //   size: size,
+  //   innerRingRadius: innerRingRadius,
+  //   outerRingRadius: outerRingRadius,
 
-    seed: levels[level][1],
+  //   seed: levels[level],
 
-    colorGridOptions: {
-      gradientXStops: ["#00ff00", "#000000", "#000000", "#ffff00"],
-      gradientYStops: ["#00ff00", "#000000", "#000000", "#00ffff"],
-      detailX: 30,
-      detailY: 30,
-    },
-  });
+  //   colorGridOptions: {
+  //     gradientXStops: ["#00ff00", "#000000", "#000000", "#ffff00"],
+  //     gradientYStops: ["#00ff00", "#000000", "#000000", "#00ffff"],
+  //     detailX: 30,
+  //     detailY: 30,
+  //   },
+  // });
 
   particles.push(part1);
-  particles.push(part2);
+  // particles.push(part2);
 
   if (part1.mesh) scene.add(part1.mesh);
-  if (part2.mesh) scene.add(part2.mesh);
+  // if (part2.mesh) scene.add(part2.mesh);
 
   switchActive();
 
@@ -241,17 +214,23 @@ function setupScene(): void {
   playerPart = new Particle();
   resetPlayer();
 
+  const goal = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, outerRingRadius - innerRingRadius + 1, 0.07),
+    new THREE.MeshBasicMaterial({ color: 0 }),
+  );
+  goal.position.set(0, outerRingRadius - innerRingRadius / 2 - 0.5, 0);
+  // goal.visible = false;
+  scene.add(goal);
+
   scene.add(player);
 }
 function nextLevel(): void {
   level++;
   if (level >= levels.length) level = 0;
 
-  particles[0].newNoise(levels[level][0]);
-  particles[1].newNoise(levels[level][1]);
-  console.log(
-    "level: " + level + " [" + levels[level][0] + ", " + levels[level][1] + "]",
-  );
+  particles[0].newNoise(levels[level]);
+  // particles[1].newNoise(levels[level][1]);
+  console.log("level: " + level + " [" + levels[level] + "]");
 }
 function switchActive(): void {
   active++;
@@ -296,12 +275,12 @@ function animate(): void {
 
   let dt: number = clock.getDelta();
 
-  const minRate = 0.5;
+  const minRate = 0.8;
   const maxRate = 1;
   // if (multiplier < 0.5 && backgroundMusicRate > minRate) {
-  //   backgroundMusicRate -= dt * 10;
+  //   backgroundMusicRate -= dt * 4;
   // } else if (multiplier > 0.5 && backgroundMusicRate < maxRate) {
-  //   backgroundMusicRate += dt * 10;
+  //   backgroundMusicRate += dt * 4;
   // }
   if (multiplier < 0.5) {
     backgroundMusicRate = minRate;
@@ -319,10 +298,22 @@ function animate(): void {
 
   if (particles[0].mesh?.visible)
     particles[0].update(dt, camera, multiplier, invert);
-  if (particles[1].mesh?.visible)
-    particles[1].update(dt, camera, multiplier, invert);
+  // if (particles[1].mesh?.visible)
+  //   particles[1].update(dt, camera, multiplier, invert);
 
   const { minX, maxX, minY, maxY } = getCameraMinMax(camera);
+
+  if (multiplier < 0.5) {
+    const overlay = document.getElementById("overlay");
+    if (overlay) {
+      overlay.style.opacity = "1.0";
+    }
+  } else {
+    const overlay = document.getElementById("overlay");
+    if (overlay) {
+      overlay.style.opacity = "0.0";
+    }
+  }
 
   // multiplier = keys["m"] ? 0.05 : 1;
   if (!stop && state === "game") {
@@ -390,7 +381,6 @@ function animate(): void {
   const alpha = 1 - Math.exp(-dt / tau);
   (overlay.material as THREE.MeshBasicMaterial).opacity = alpha;
 
-  renderer.render(overlayScene, overlayCamera);
   renderer.render(scene, camera);
 
   stats.end();
@@ -398,19 +388,19 @@ function animate(): void {
 
 function onResize(): void {
   let aspect = window.innerWidth / window.innerHeight;
-  if (aspect > 1) {
-    camera.top = visibleArea / aspect;
-    camera.bottom = -visibleArea / aspect;
+  // if (aspect > 1) {
+  //   camera.top = visibleArea / aspect;
+  //   camera.bottom = -visibleArea / aspect;
 
-    camera.right = visibleArea;
-    camera.left = -visibleArea;
-  } else {
-    camera.top = visibleArea;
-    camera.bottom = -visibleArea;
+  //   camera.right = visibleArea;
+  //   camera.left = -visibleArea;
+  // } else {
+  camera.top = visibleArea;
+  camera.bottom = -visibleArea;
 
-    camera.right = visibleArea * aspect;
-    camera.left = -visibleArea * aspect;
-  }
+  camera.right = visibleArea * aspect;
+  camera.left = -visibleArea * aspect;
+  // }
   camera.updateProjectionMatrix();
 
   renderer.setSize(window.innerWidth, window.innerHeight);
