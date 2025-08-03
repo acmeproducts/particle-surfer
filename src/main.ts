@@ -9,8 +9,8 @@ import { getCameraMinMax } from "./helper";
 // @ts-ignore
 import { Howl } from "howler";
 
-const base = "./particle-surfer";
-// const base = ".";
+// const base = "./particle-surfer";
+const base = ".";
 
 let stats: Stats = new Stats();
 stats.showPanel(0);
