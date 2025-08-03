@@ -8,7 +8,6 @@ export default defineConfig({
   },
   resolve: { alias: { "@": "/src" } },
 
-  // also change the base in main.ts
   // for github pages
   base: "/particle-surfer",
   // for itch.io
