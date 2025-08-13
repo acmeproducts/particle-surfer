@@ -32,6 +32,11 @@ let invert = false;
 
 let reached50 = false;
 
+// Color switching variables
+let colorSwitchTimer = 0;
+let colorSwitchInterval = 3; // Switch colors every 3 seconds
+let currentColorIndex = 0;
+
 let renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.OrthographicCamera,
@@ -77,7 +82,18 @@ const gradientStops = {
     gradientXStops: ["#ff0000", "#000000", "#000000", "#ff4400"],
     gradientYStops: ["#ff0044", "#000000", "#000000", "#ff0000"],
   },
+  purple_orange: {
+    gradientXStops: ["#ff00ff", "#000000", "#000000", "#ff8800"],
+    gradientYStops: ["#8800ff", "#000000", "#000000", "#ff4400"],
+  },
+  cyan_yellow: {
+    gradientXStops: ["#00ffff", "#000000", "#000000", "#ffff00"],
+    gradientYStops: ["#0088ff", "#000000", "#000000", "#ff8800"],
+  },
 };
+
+// Array of all color schemes for random switching
+const colorSchemes = Object.values(gradientStops);
 
 const levels: {
   seed: number;
@@ -343,6 +359,10 @@ function nextLevel(): void {
   state = "game";
 
   resetPlayer();
+  
+  // Reset color timer for new level
+  colorSwitchTimer = 0;
+  currentColorIndex = 0;
 
   level++;
   if (level >= levels.length) {
@@ -405,6 +425,10 @@ function resetPlayer(): void {
   reached50 = false;
   multiplier = 1;
   if (goal) goal.visible = false;
+  
+  // Reset color switching
+  colorSwitchTimer = 0;
+  currentColorIndex = 0;
 }
 function animate(): void {
   requestAnimationFrame(animate);
@@ -453,11 +477,39 @@ function animate(): void {
     }
   }
 
+  // Handle color switching during gameplay
+  if (state === "game") {
+    colorSwitchTimer += dt;
+    if (colorSwitchTimer >= colorSwitchInterval) {
+      colorSwitchTimer = 0;
+      currentColorIndex = (currentColorIndex + 1) % colorSchemes.length;
+      particles[0].setColors(colorSchemes[currentColorIndex]);
+      
+      // Randomize next interval between 2-5 seconds
+      colorSwitchInterval = 2 + Math.random() * 3;
+    }
+  }
+
   // multiplier = keys["m"] ? 0.05 : 1;
   if (!stop && state === "game") {
     particles[active].applyNoiseForce(playerPart, dt * multiplier, invert);
 
     playerPart.update(dt, particles[active].maxSpeed);
+    
+    // Apply bounce instead of death
+    const innerRingRadiusSquared = innerRingRadius * innerRingRadius;
+    const outerRingRadiusSquared = outerRingRadius * outerRingRadius;
+    
+    // Check and bounce the player
+    playerPart.bounce(
+      minX,
+      maxX,
+      minY,
+      maxY,
+      innerRingRadiusSquared,
+      outerRingRadiusSquared
+    );
+    
     player.position.set(playerPart.pos.x, playerPart.pos.y, 0);
 
     // get angle of player position
@@ -501,25 +553,8 @@ function animate(): void {
     camera.position.setLength((innerRingRadius + outerRingRadius) / 2);
     camera.position.z = 10;
 
-    if (
-      playerPart.isDead(
-        minX,
-        maxX,
-        minY,
-        maxY,
-        innerRingRadius * innerRingRadius,
-        outerRingRadius * outerRingRadius,
-      )
-    ) {
-      console.log("player died");
-      const deathMenu = document.getElementById("death-menu");
-      if (deathMenu) {
-        deathMenu.classList.remove("hidden");
-      }
-      state = "pause";
-      player.visible = false;
-      multiplier = 1;
-    }
+    // Player no longer dies from boundaries - removed death check
+    // The isDead function is only used for regular particles now
   }
 
   const alpha = 1 - Math.exp(-dt / tau);
