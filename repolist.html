@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repo File List</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #0f172a;
+      background: #f3f5fb;
+    }
+    .wrap { width: min(1200px, 96vw); margin: 24px auto 30px; }
+    h1 { margin: 0 0 14px; font-size: 1.45rem; font-weight: 700; color: #1f2937; }
+
+    .controls {
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1fr minmax(220px, 280px);
+      gap: 8px;
+    }
+    input, button {
+      border-radius: 10px;
+      border: 1px solid #c6d0e1;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 10px 12px;
+      font-size: 0.94rem;
+    }
+    button {
+      border-color: #1d4ed8;
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    .status-row { margin: 8px 0 10px; min-height: 1.2em; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    #status { min-height: 1.2em; color: #334155; font-size: 0.92rem; }
+    #status.error { color: #b91c1c; }
+    #exportCsvBtn { display: none; margin: 0; width: auto; padding: 5px 9px; font-size: 0.76rem; border-radius: 8px; white-space: nowrap; }
+
+    .card {
+      border: 1px solid #d8deea;
+      border-radius: 14px;
+      background: #ffffff;
+      overflow: hidden;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+    }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: #dbeafe;
+      border-bottom: 1px solid #d9e1ee;
+      color: #000000;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 12px;
+      text-align: left;
+      user-select: none;
+      cursor: default;
+    }
+    [data-sort-key] { cursor: pointer; }
+    [data-sort-key][data-active="true"]::after { content: attr(data-dir); margin-left: 6px; color: #64748b; }
+
+    tbody td {
+      border-bottom: 1px solid #e3e8f3;
+      border-right: 1px solid #ebf0f7;
+      padding: 7px 10px;
+      font-size: 0.88rem;
+      vertical-align: middle;
+      line-height: 1.25;
+    }
+    tbody td:last-child { border-right: 0; }
+    tbody tr:nth-child(odd) td { background: #ffffff; }
+    tbody tr:nth-child(even) td { background: #f9fbff; }
+    tbody tr:hover td { background: #eef4ff; }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.84rem; }
+    .name-cell {
+      width: 240px;
+      max-width: 240px;
+      min-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .open-cell {
+      width: 30px;
+      min-width: 30px;
+      max-width: 30px;
+      text-align: center;
+      padding: 5px 0;
+      white-space: nowrap;
+    }
+    .desc-cell { min-width: 300px; width: 48%; }
+    .delete-cell, .edit-cell, .size-cell, .changed-cell { white-space: nowrap; }
+    .delete-cell, .edit-cell { width: 38px; text-align: center; padding: 5px; }
+    .size-cell { width: 6ch; min-width: 6ch; padding: 7px 4px; }
+    .changed-cell { width: 8ch; min-width: 8ch; padding: 7px 4px; }
+    .file-primary {
+      display: block;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+    .file-external {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      color: #64748b;
+      background: #f8fafc;
+      line-height: 1;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .file-external:hover { background: #e2e8f0; text-decoration: none; }
+    .commit-msg {
+      font-size: 0.76rem;
+      color: #475569;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+    a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      color: #334155;
+      font-size: 0.67rem;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 0;
+      cursor: pointer;
+    }
+    .action-btn:hover {
+      background: #f8fafc;
+      text-decoration: none;
+    }
+    .action-btn.ghost {
+      color: #94a3b8;
+      cursor: default;
+      background: #f8fafc;
+      pointer-events: none;
+    }
+    .action-btn.delete {
+      color: #64748b;
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+    .action-btn.delete:hover { background: #e2e8f0; }
+
+    .recycle {
+      margin: 12px 0;
+      border: 1px solid #d8deea;
+      border-radius: 12px;
+      background: #ffffff;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+    }
+    .recycle-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 10px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: #f8faff;
+      border-bottom: 1px solid #e3e8f3;
+    }
+    .chev { display: inline-block; width: 14px; }
+    .recycle-list { display: none; padding: 10px; }
+    .recycle.open .recycle-list { display: block; }
+    .recycle-item {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid #e3e8f3;
+      border-radius: 10px;
+      background: #fcfdff;
+      margin-bottom: 8px;
+    }
+    .mini {
+      border: 1px solid #c5d2ea;
+      background: #f8fbff;
+      color: #1f2937;
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .mini:hover { background: #edf3ff; }
+    .sort-chip {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: #64748b;
+    }
+    .sort-chip:hover { background: #e2e8f0; }
+    [data-sort-key][data-active="true"].sort-chip {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+    .mini.danger {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+    .mini.danger:hover { background: #fee2e2; }
+    .empty { color: #64748b; font-size: 0.9rem; padding: 12px; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.45);
+      padding: 16px;
+      z-index: 30;
+    }
+    .modal.open { display: flex; }
+    .modal-panel {
+      width: min(620px, 100%);
+      border-radius: 14px;
+      border: 1px solid #d8deea;
+      background: #fff;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+      padding: 14px;
+    }
+    .modal-panel h3 { margin: 0 0 10px; font-size: 1.05rem; }
+    .modal-grid { display: grid; gap: 10px; }
+    .modal-grid label { font-size: 0.85rem; color: #475569; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+    .ghost { background: #fff; color: #334155; border-color: #cbd5e1; }
+    @media (max-width: 760px) {
+      .wrap { width: min(1200px, 99vw); margin: 10px auto 16px; }
+      .controls { grid-template-columns: 1fr; }
+      .status-row { flex-wrap: wrap; }
+      th, td { padding: 6px 6px; }
+      .name-cell { min-width: 110px; width: 160px; max-width: 160px; }
+      .open-cell { width: 24px; min-width: 24px; max-width: 24px; padding: 5px 0; }
+      .desc-cell { min-width: 220px; width: auto; }
+      .action-btn { width: 20px; height: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Repository File List</h1>
+    <div class="controls">
+      <input id="repoInput" placeholder="owner/repo or github.com/owner/repo">
+      <input id="tokenInput" type="password" placeholder="GitHub PAT (optional, persisted)">
+    </div>
+    <div class="status-row">
+      <div id="status" role="status" aria-live="polite"></div>
+      <button id="exportCsvBtn" class="mini" type="button">Export CSV</button>
+    </div>
+
+    <section id="recycle" class="recycle" style="display:none;">
+      <div id="recycleHeader" class="recycle-header"><span id="recycleChev" class="chev">▸</span><span id="recycleLabel">Recently Deleted (0)</span></div>
+      <div id="recycleList" class="recycle-list"></div>
+      <div style="padding: 0 10px 10px;"><button id="deleteAllDeletedBtn" class="mini danger" type="button" style="display:none;">Delete All</button></div>
+    </section>
+
+    <section class="card">
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th><button class="mini sort-chip" type="button" data-sort-key="name">Filename</button></th>
+            <th>Open</th>
+            <th>Delete</th>
+            <th>Edit</th>
+            <th><button class="mini sort-chip" type="button" data-sort-key="commitMessage">Description</button></th>
+            <th><button class="mini sort-chip" type="button" data-sort-key="size">Size</button></th>
+            <th><button class="mini sort-chip" type="button" data-sort-key="changed">Changed</button></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      </div>
+    </section>
+  </main>
+  <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit file metadata">
+    <div class="modal-panel">
+      <h3>Edit file</h3>
+      <div class="modal-grid">
+        <div>
+          <label for="editName">Name / Path</label>
+          <input id="editName" type="text">
+        </div>
+        <div>
+          <label for="editCommitMessage">Commit message</label>
+          <input id="editCommitMessage" type="text">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="editCancel" class="ghost" type="button">Cancel</button>
+        <button id="editSave" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAT_KEY = 'repolist:pat';
+    const state = { files: [], sortKey: 'changed', sortDir: 'desc', repo: null, recycleOpen: false, editPath: null, loading: false };
+
+    function parseRepoLike(value) {
+      if (!value) return null;
+      const v = String(value).trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      const q = v.match(/(?:^|[?&])repo=([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/);
+      if (q) return q[1];
+      let m = v.match(/^github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/i);
+      if (m) return `${m[1]}/${m[2]}`;
+      m = v.match(/^github\.([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/i);
+      if (m) return `${m[1]}/${m[2]}`;
+      m = v.match(/^([A-Za-z0-9_.-]+)\.github\.io\/([A-Za-z0-9_.-]+)/i);
+      if (m) return `${m[1]}/${m[2]}`;
+      m = v.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/);
+      return m ? `${m[1]}/${m[2]}` : null;
+    }
+
+    function detectRepo() {
+      const url = new URL(location.href);
+      const candidates = [
+        url.searchParams.get('repo'),
+        url.host + url.pathname,
+        url.pathname.slice(1),
+        decodeURIComponent(url.pathname.slice(1)),
+        decodeURIComponent(url.search)
+      ];
+      for (const c of candidates) {
+        const parsed = parseRepoLike(c || '');
+        if (parsed) return parsed;
+      }
+      return null;
+    }
+
+    function setStatus(text, isError = false) {
+      const el = document.getElementById('status');
+      el.textContent = text;
+      el.className = isError ? 'error' : '';
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function shortCommitMessage(message) {
+      const line = String(message || '').split('\n')[0].trim();
+      if (!line) return '—';
+      return line.length > 131 ? `${line.slice(0, 131)}…` : line;
+    }
+
+    function shortFileName(path) {
+      const full = String(path || '');
+      return full.length > 40 ? `${full.slice(0, 40)}…` : full;
+    }
+
+    function commitWrappedPreview(message) {
+      const text = shortCommitMessage(message || '');
+      if (!text || text === '—') return '—';
+      const parts = [];
+      for (let i = 0; i < text.length; i += 130) parts.push(text.slice(i, i + 130));
+      if (parts.join('').length < text.length) parts.push('…');
+      return parts.join('\n');
+    }
+
+    function encodePath(path) {
+      return String(path || '').split('/').map((seg) => encodeURIComponent(seg)).join('/');
+    }
+
+    function fmtSize(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) return '-';
+      if (bytes < 1024) return `${bytes} B`;
+      const units = ['KB', 'MB', 'GB'];
+      let n = bytes / 1024;
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(1)} ${units[i]}`;
+    }
+
+    function fmtAgo(iso) {
+      if (!iso) return 'unknown';
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return 'unknown';
+      let sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+      const d = Math.floor(sec / 86400); sec -= d * 86400;
+      const h = Math.floor(sec / 3600); sec -= h * 3600;
+      const m = Math.floor(sec / 60);
+      if (d > 0) return `${d}d ${h}h ago`;
+      if (h > 0) return `${h}h ${m}m ago`;
+      return `${m}m ago`;
+    }
+
+    function currentToken() {
+      return (document.getElementById('tokenInput').value || '').trim();
+    }
+
+    function persistToken() {
+      localStorage.setItem(PAT_KEY, currentToken());
+    }
+
+    async function fetchJson(url) {
+      const token = currentToken();
+      const headers = { Accept: 'application/vnd.github+json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      let res = await fetch(url, { headers });
+      if (res.status === 401 && token) {
+        res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
+      }
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`GitHub API ${res.status}: ${body.slice(0, 200)}`);
+      }
+      return res.json();
+    }
+
+    function storageKey(base) {
+      if (!state.repo) return `${base}:global`;
+      return `${base}:${state.repo.owner}/${state.repo.name}`;
+    }
+
+    function loadDeleted() {
+      try { return JSON.parse(localStorage.getItem(storageKey('repolist:deleted')) || '[]'); }
+      catch (_) { return []; }
+    }
+
+    function saveDeleted(items) {
+      try { localStorage.setItem(storageKey('repolist:deleted'), JSON.stringify(items)); }
+      catch (_) {}
+    }
+
+    function loadPurgedSet() {
+      try { return new Set(JSON.parse(localStorage.getItem(storageKey('repolist:purged')) || '[]')); }
+      catch (_) { return new Set(); }
+    }
+
+    function savePurgedSet(set) {
+      try { localStorage.setItem(storageKey('repolist:purged'), JSON.stringify([...set])); }
+      catch (_) {}
+    }
+
+    function loadRepoCache() {
+      try {
+        const raw = localStorage.getItem(storageKey('repolist:cache'));
+        const data = raw ? JSON.parse(raw) : null;
+        if (!data || !Array.isArray(data.files)) return null;
+        return data;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function loadMetadata() {
+      try { return JSON.parse(localStorage.getItem(storageKey('repolist:metadata')) || '{}'); }
+      catch (_) { return {}; }
+    }
+
+    function saveMetadata(meta) {
+      try { localStorage.setItem(storageKey('repolist:metadata'), JSON.stringify(meta)); }
+      catch (_) {}
+    }
+
+    function saveRepoCache(cache) {
+      try { localStorage.setItem(storageKey('repolist:cache'), JSON.stringify(cache)); }
+      catch (_) {}
+    }
+
+    async function fetchLatestCommitForPath(owner, name, branch, path) {
+      try {
+        const latest = await fetchJson(`https://api.github.com/repos/${owner}/${name}/commits?path=${encodeURIComponent(path)}&sha=${encodeURIComponent(branch)}&per_page=1`);
+        const c = Array.isArray(latest) ? latest[0] : null;
+        if (!c) return { changed: null, message: '' };
+        return {
+          changed: c.commit?.committer?.date || c.commit?.author?.date || null,
+          message: c.commit?.message || ''
+        };
+      } catch (_) {
+        return { changed: null, message: '' };
+      }
+    }
+
+    function softDelete(path) {
+      const list = loadDeleted();
+      if (!list.find((x) => x.path === path)) {
+        list.unshift({ path, deletedAt: Date.now() });
+        saveDeleted(list);
+      }
+      render();
+    }
+
+    function restoreDeleted(path) {
+      saveDeleted(loadDeleted().filter((x) => x.path !== path));
+      render();
+    }
+
+    function purgeDeleted(path) {
+      saveDeleted(loadDeleted().filter((x) => x.path !== path));
+      const purged = loadPurgedSet();
+      purged.add(path);
+      savePurgedSet(purged);
+      render();
+    }
+
+    function sortedFiles() {
+      const deleted = new Set(loadDeleted().map((x) => x.path));
+      const purged = loadPurgedSet();
+      const files = state.files.filter((f) => !deleted.has(f.path) && !purged.has(f.path));
+      const key = state.sortKey;
+      const dir = state.sortDir === 'asc' ? 1 : -1;
+      files.sort((a, b) => {
+        let av = a[key], bv = b[key];
+        if (key === 'name') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+        else if (key === 'commitMessage') { av = (av || '').toLowerCase(); bv = (bv || '').toLowerCase(); }
+        else if (key === 'pagesUrl' || key === 'ghListingUrl') { av = (av || '').toLowerCase(); bv = (bv || '').toLowerCase(); }
+        else if (key === 'changed') { av = av ? new Date(av).getTime() : 0; bv = bv ? new Date(bv).getTime() : 0; }
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return 0;
+      });
+      return files;
+    }
+
+    function renderRecycleBin() {
+      const wrap = document.getElementById('recycle');
+      const list = loadDeleted();
+      const deleteAllBtn = document.getElementById('deleteAllDeletedBtn');
+      if (!list.length) {
+        wrap.style.display = 'none';
+        deleteAllBtn.style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'block';
+      deleteAllBtn.style.display = 'inline-flex';
+      document.getElementById('recycleLabel').textContent = `Recently Deleted (${list.length})`;
+      document.getElementById('recycleChev').textContent = state.recycleOpen ? '▾' : '▸';
+      wrap.classList.toggle('open', state.recycleOpen);
+
+      document.getElementById('recycleList').innerHTML = list.map((item) => `
+        <div class="recycle-item">
+          <span class="mono" title="${esc(item.path)}">${esc(item.path)}</span>
+          <button class="mini" type="button" data-restore="${esc(item.path)}">Restore</button>
+          <button class="mini danger" type="button" data-purge="${esc(item.path)}">Delete Forever</button>
+        </div>`).join('');
+
+      document.querySelectorAll('[data-restore]').forEach((btn) => btn.addEventListener('click', () => restoreDeleted(btn.getAttribute('data-restore'))));
+      document.querySelectorAll('[data-purge]').forEach((btn) => btn.addEventListener('click', () => purgeDeleted(btn.getAttribute('data-purge'))));
+    }
+
+    function render() {
+      renderRecycleBin();
+      const tbody = document.getElementById('rows');
+      const files = sortedFiles();
+      if (!files.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No visible files. Restore files from Recently Deleted if needed.</td></tr>';
+      } else {
+        tbody.innerHTML = files.map((f) => {
+          const canLaunch = /\.html?$/i.test(f.path);
+          return `<tr>
+            <td class="mono name-cell" title="${esc(f.path)}">
+              ${canLaunch ? `<a class="file-primary" href="${esc(f.pagesUrl)}" target="_blank" rel="noopener" title="${esc(f.path)}">${esc(shortFileName(f.path))}</a>` : `<span class="file-primary" title="${esc(f.path)}">${esc(shortFileName(f.path))}</span>`}
+            </td>
+            <td class="open-cell">
+              <a class="file-external" href="${esc(f.ghListingUrl)}" target="_blank" rel="noopener" aria-label="Open GitHub blob for ${esc(f.path)}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"></path><path fill="currentColor" d="M5 5h6v2H7v10h10v-4h2v6H5z"></path></svg></a>
+            </td>
+            <td class="delete-cell">
+              <button class="action-btn delete" type="button" data-delete="${esc(f.path)}" aria-label="Delete ${esc(f.path)}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"></path></svg></button>
+            </td>
+            <td class="edit-cell">
+              <button class="action-btn" type="button" data-edit="${esc(f.path)}" aria-label="Edit ${esc(f.path)}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zm18-11.5a1 1 0 0 0 0-1.41l-1.34-1.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 5.75z"></path></svg></button>
+            </td>
+            <td class="desc-cell" title="${esc(f.commitMessage || '')}">
+              <span class="commit-msg">${esc(commitWrappedPreview(f.commitMessage || ''))}</span>
+            </td>
+            <td class="size-cell">${esc(fmtSize(f.size))}</td>
+            <td class="changed-cell" title="${esc(f.changed || '')}">${esc(fmtAgo(f.changed))}</td>
+          </tr>`;
+        }).join('');
+        document.querySelectorAll('[data-delete]').forEach((btn) => btn.addEventListener('click', () => softDelete(btn.getAttribute('data-delete'))));
+        document.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openEdit(btn.getAttribute('data-edit'))));
+      }
+      document.getElementById('exportCsvBtn').style.display = files.length ? 'inline-flex' : 'none';
+
+      document.querySelectorAll('[data-sort-key]').forEach((el) => {
+        const active = el.dataset.sortKey === state.sortKey;
+        el.dataset.active = active ? 'true' : 'false';
+        el.dataset.dir = active ? (state.sortDir === 'asc' ? '▲' : '▼') : '';
+      });
+    }
+
+    function exportCsv() {
+      const files = sortedFiles();
+      if (!files.length) return;
+      const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const rows = ['filename,pages_url,blob_url,description,size,updated_when,updated_iso'];
+      const asLink = (v) => `=HYPERLINK("${String(v ?? '').replace(/"/g, '""')}","${String(v ?? '').replace(/"/g, '""')}")`;
+      for (const f of files) {
+        rows.push([
+          q(f.path),
+          q(asLink(f.pagesUrl || '')),
+          q(asLink(f.ghListingUrl || '')),
+          q(f.commitMessage || ''),
+          q(f.size),
+          q(fmtAgo(f.changed)),
+          q(f.changed || '')
+        ].join(','));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.repo?.owner || 'repo'}-${state.repo?.name || 'files'}-files.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    }
+
+    async function loadRepo(value) {
+      if (state.loading) return;
+      const parsed = parseRepoLike(value);
+      if (!parsed) throw new Error('Could not parse repo. Use owner/repo style input.');
+      state.loading = true;
+      const [owner, name] = parsed.split('/');
+      state.repo = { owner, name, branch: 'main' };
+      setStatus(`Loading ${owner}/${name} ...`);
+      try {
+        const meta = await fetchJson(`https://api.github.com/repos/${owner}/${name}`);
+        const branch = meta.default_branch || 'main';
+        state.repo.branch = branch;
+
+        const headList = await fetchJson(`https://api.github.com/repos/${owner}/${name}/commits?per_page=1&sha=${encodeURIComponent(branch)}`);
+        const headSha = Array.isArray(headList) && headList[0] ? headList[0].sha : null;
+        const cache = loadRepoCache();
+        const metadata = loadMetadata();
+        const cachedByPath = new Map((cache?.files || []).map((f) => [f.path, f]));
+
+        if (cache && cache.branch === branch && cache.headSha && headSha && cache.headSha === headSha) {
+          state.files = cache.files;
+          render();
+          setStatus(`Loaded ${state.files.length} files from ${owner}/${name} (${branch}) from cache.`);
+          return;
+        }
+
+        const tree = await fetchJson(`https://api.github.com/repos/${owner}/${name}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+        const blobs = (tree.tree || []).filter((x) => x.type === 'blob');
+        const changedPaths = new Set();
+
+        if (cache && cache.branch === branch && cache.headSha && headSha) {
+          try {
+            const cmp = await fetchJson(`https://api.github.com/repos/${owner}/${name}/compare/${encodeURIComponent(cache.headSha)}...${encodeURIComponent(headSha)}`);
+            for (const f of (cmp.files || [])) {
+              if (f.filename) changedPaths.add(f.filename);
+              if (f.previous_filename) changedPaths.add(f.previous_filename);
+            }
+          } catch (_) {
+            for (const b of blobs) changedPaths.add(b.path);
+          }
+        } else {
+          for (const b of blobs) changedPaths.add(b.path);
+        }
+
+        state.files = await Promise.all(blobs.map(async (item) => {
+          const encodedPath = encodePath(item.path);
+          const pagesPrefix = name.toLowerCase() === `${owner.toLowerCase()}.github.io`
+            ? `https://${owner}.github.io/`
+            : `https://${owner}.github.io/${name}/`;
+          const cached = cachedByPath.get(item.path);
+          const commitData = (!changedPaths.has(item.path) && cached)
+            ? { changed: cached.changed || null, message: cached.commitMessage || '' }
+            : await fetchLatestCommitForPath(owner, name, branch, item.path);
+          const persistent = metadata[item.path] || {};
+          const finalChanged = commitData.changed || cached?.changed || persistent.changed || null;
+          const finalMessage = commitData.message || cached?.commitMessage || persistent.commitMessage || '';
+          return {
+            path: item.path,
+            name: item.path.split('/').pop(),
+            size: Number.isFinite(item.size) ? item.size : 0,
+            changed: finalChanged,
+            commitMessage: finalMessage,
+            pagesUrl: pagesPrefix + encodedPath,
+            ghListingUrl: `https://github.com/${owner}/${name}/blob/${branch}/${encodedPath}`
+          };
+        }));
+
+        saveMetadata(state.files.reduce((acc, file) => {
+          acc[file.path] = { changed: file.changed || null, commitMessage: file.commitMessage || '' };
+          return acc;
+        }, {}));
+
+        saveRepoCache({
+          branch,
+          headSha: headSha || null,
+          treeSha: tree.sha || null,
+          savedAt: new Date().toISOString(),
+          files: state.files
+        });
+
+        render();
+        setStatus(`Loaded ${state.files.length} files from ${owner}/${name} (${branch}).`);
+      } catch (err) {
+        const msg = err.message || String(err);
+        if (msg.includes('GitHub API 401')) {
+          setStatus('GitHub token was rejected (401). Re-enter PAT and it will persist automatically.', true);
+        } else
+        if (msg.includes('GitHub API 403')) {
+          setStatus('GitHub API rate limit hit. Add a PAT in the token box for higher limits.', true);
+        } else {
+          setStatus(msg, true);
+        }
+        throw err;
+      } finally {
+        state.loading = false;
+      }
+    }
+
+    function openEdit(path) {
+      const file = state.files.find((f) => f.path === path);
+      if (!file) return;
+      state.editPath = path;
+      document.getElementById('editName').value = file.path;
+      document.getElementById('editCommitMessage').value = shortCommitMessage(file.commitMessage || `Update ${file.path}`);
+      document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeEdit() {
+      state.editPath = null;
+      document.getElementById('editModal').classList.remove('open');
+    }
+
+    function b64Utf8(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+    async function githubWrite(path, body, method = 'PUT') {
+      const token = currentToken();
+      if (!token) throw new Error('GitHub PAT required for edits.');
+      const [owner, name] = [state.repo.owner, state.repo.name];
+      const url = `https://api.github.com/repos/${owner}/${name}/contents/${encodePath(path)}`;
+      const res = await fetch(url, {
+        method,
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`GitHub API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      return res.json();
+    }
+
+    async function saveEdit() {
+      if (!state.editPath || !state.repo) return;
+      const oldPath = state.editPath;
+      const newPath = (document.getElementById('editName').value || '').trim();
+      const message = (document.getElementById('editCommitMessage').value || '').trim() || `Update ${oldPath}`;
+      if (!newPath) return setStatus('Name/path is required.', true);
+      const [owner, name, branch] = [state.repo.owner, state.repo.name, state.repo.branch];
+      try {
+        setStatus(`Saving ${oldPath}...`);
+        const current = await fetchJson(`https://api.github.com/repos/${owner}/${name}/contents/${encodePath(oldPath)}?ref=${encodeURIComponent(branch)}`);
+        const content = current.content ? current.content.replace(/\n/g, '') : '';
+        if (newPath !== oldPath) {
+          await githubWrite(newPath, { message, content, branch });
+          await githubWrite(oldPath, { message: `Remove ${oldPath}`, sha: current.sha, branch }, 'DELETE');
+        } else {
+          const decoded = current.content ? decodeURIComponent(escape(atob(content))) : '';
+          await githubWrite(oldPath, { message, content: b64Utf8(decoded), sha: current.sha, branch });
+        }
+        closeEdit();
+        await loadRepo(`${owner}/${name}`);
+        setStatus(`Saved changes for ${newPath}.`);
+      } catch (err) {
+        setStatus(err.message || String(err), true);
+      }
+    }
+
+    document.getElementById('repoInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        loadRepo(document.getElementById('repoInput').value).catch((err) => setStatus(err.message || String(err), true));
+      }
+    });
+
+    let loadTimer = null;
+    document.getElementById('repoInput').addEventListener('input', () => {
+      const v = document.getElementById('repoInput').value;
+      clearTimeout(loadTimer);
+      loadTimer = setTimeout(() => {
+        if (!parseRepoLike(v)) return;
+        loadRepo(v).catch((err) => setStatus(err.message || String(err), true));
+      }, 450);
+    });
+    document.getElementById('tokenInput').value = localStorage.getItem(PAT_KEY) || '';
+    document.getElementById('tokenInput').addEventListener('input', persistToken);
+    document.getElementById('tokenInput').addEventListener('blur', persistToken);
+    document.getElementById('editCancel').addEventListener('click', closeEdit);
+    document.getElementById('editSave').addEventListener('click', saveEdit);
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') closeEdit();
+    });
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+    document.getElementById('recycleHeader').addEventListener('click', () => {
+      state.recycleOpen = !state.recycleOpen;
+      renderRecycleBin();
+    });
+    document.getElementById('deleteAllDeletedBtn').addEventListener('click', () => {
+      const list = loadDeleted();
+      if (!list.length) return;
+      if (!window.confirm(`Delete all ${list.length} recently deleted entries forever? This cannot be undone.`)) return;
+      const purged = loadPurgedSet();
+      for (const item of list) purged.add(item.path);
+      savePurgedSet(purged);
+      saveDeleted([]);
+      render();
+    });
+
+    document.querySelectorAll('[data-sort-key]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const key = el.dataset.sortKey;
+        if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        else { state.sortKey = key; state.sortDir = (key === 'name' || key === 'commitMessage') ? 'asc' : 'desc'; }
+        render();
+      });
+    });
+
+    (async function init() {
+      const detected = detectRepo();
+      if (detected) {
+        document.getElementById('repoInput').value = detected;
+        try { await loadRepo(detected); }
+        catch (err) { setStatus(err.message || String(err), true); }
+      } else {
+        setStatus('No repo detected automatically. Enter owner/repo to auto-load.');
+      }
+    })();
+  </script>
+</body>
+</html>
