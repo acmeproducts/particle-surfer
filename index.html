@@ -1,16 +1,126 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Repo Redirect</title></head>
-<body style="font-family:system-ui,Segoe UI,Roboto,sans-serif;padding:20px">
-<script>
-(function(){
-  function p(v){if(!v)return null;v=v.trim().replace(/^https?:\/\//i,'').replace(/^www\./i,'');
-    var q=v.match(/(?:^|[?&])repo=([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/);if(q)return q[1];
-    var m=v.match(/^github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/i);if(m)return m[1]+'/'+m[2];
-    m=v.match(/^github\.([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/i);if(m)return m[1]+'/'+m[2];
-    m=v.match(/^([A-Za-z0-9_.-]+)\.github\.io\/([A-Za-z0-9_.-]+)/i);if(m)return m[1]+'/'+m[2];
-    m=v.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/);if(m)return m[1]+'/'+m[2];return null;}
-  var u=new URL(location.href),r=p(u.searchParams.get('repo'))||p(u.host+u.pathname)||p(u.pathname.slice(1));
-  if(!r){document.body.innerHTML='<h2>Enter repo</h2><input id="i" placeholder="owner/repo"><button id="b">Go</button>';document.getElementById('b').onclick=function(){var x=p(document.getElementById('i').value);if(x)location.href='https://'+x.split('/')[0]+'.github.io/'+x.split('/')[1]+'/repolist.html';};return;}
-  var s=r.split('/');location.replace('https://'+s[0]+'.github.io/'+s[1]+'/repolist.html');
-})();
-</script></body></html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="src/app.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      .circle {
+        transform: rotate(-90deg);
+        stroke-linecap: round;
+      }
+    </style>
+
+    <title>particle surfer</title>
+  </head>
+
+  <body scroll="no" class="overflow-hidden bg-black touch-none select-none">
+    <div id="pixi-container"></div>
+    <script src="src/main.js" type="module"></script>
+
+    <div class="absolute top-2 right-2 w-16 h-16 z-50 hidden" id="progress-bar">
+      <!-- svg circle -->
+      <svg class="circle" viewBox="0 0 100 100" class="h-full w-full">
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          stroke="#f5f5f5"
+          stroke-width="10"
+          fill="none"
+        />
+      </svg>
+    </div>
+
+    <div
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-between text-6xl md:text-9xl font-bold"
+      style="
+        font-family:
+          &quot;Arial Rounded MT Bold&quot;, &quot;Comic Sans MS&quot;,
+          sans-serif;
+      "
+      id="main-menu"
+    >
+      <div></div>
+      <div class="flex flex-col items-center justify-center mt-12">
+        particle<br />
+        surfer
+        <button
+          class="text-4xl md:mt-12 mt-8 cursor-pointer text-neutral-100 hover:text-neutral-200"
+          id="start-button"
+        >
+          start
+        </button>
+      </div>
+      <div
+        class="flex flex-col items-center justify-center text-lg mb-8 px-4 text-neutral-200"
+        style="
+          font-family:
+            &quot;Arial Rounded MT&quot;, &quot;Comic Sans MS&quot;, sans-serif;
+        "
+      >
+        yo let the particles carry you for one full loop, hold space to slow down time
+      </div>
+    </div>
+
+    <div
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-center text-6xl md:text-9xl font-bold hidden"
+      style="
+        font-family:
+          &quot;Arial Rounded MT Bold&quot;, &quot;Comic Sans MS&quot;,
+          sans-serif;
+      "
+      id="pause-menu"
+    >
+      level <br />
+      complete
+      <button
+        class="text-4xl md:mt-16 mt-8 cursor-pointer text-neutral-100 hover:text-neutral-200"
+        id="next-level-button"
+      >
+        next level
+      </button>
+    </div>
+
+
+    <div
+      class="absolute inset-0 w-full h-full text-white flex flex-col mt-4 text-center items-center justify-center text-6xl md:text-9xl font-bold hidden"
+      style="
+        font-family:
+          &quot;Arial Rounded MT Bold&quot;, &quot;Comic Sans MS&quot;,
+          sans-serif;
+      "
+      id="death-menu"
+    >
+      you <br />
+      died
+      <button
+        class="text-4xl md:mt-16 mt-8 cursor-pointer text-neutral-100 hover:text-neutral-200"
+        id="restart-button"
+      >
+        restart
+      </button>
+    </div>
+
+    <div
+      id="overlay"
+      class="fixed inset-0 w-full h-full pointer-events-none transition-opacity duration-1000 bg-radial-[at_50%_55%] from-transparent via-transparent to-neutral-800/20"
+    ></div>
+
+    <div class="absolute top-2 right-2 w-16 h-16 z-40">
+      <!-- svg circle -->
+      <svg viewBox="0 0 100 100" class="h-full w-full text-neutral-700/50">
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          stroke="currentColor"
+          stroke-width="10"
+          fill="none"
+        />
+      </svg>
+    </div>
+  </body>
+</html>
